@@ -1,6 +1,7 @@
 package com.xowl.browser;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.app.DownloadManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -18,6 +19,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -26,6 +28,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.text.TextUtils;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
@@ -64,6 +67,18 @@ public class MainActivity extends Activity {
                     + "deleteValue:function(k){return Promise.resolve(GM_deleteValue(k));},"
                     + "addStyle:GM_addStyle,openInTab:GM_openInTab,setClipboard:GM_setClipboard,xmlHttpRequest:GM_xmlhttpRequest};";
 
+
+    private static final String MEDIA_JS =
+            "(function(){var t=TOKEN;var k='__xom_'+t;if(window[k])return;window[k]=1;"
+                    + "function f(x,y,g){var a=document.elementsFromPoint?document.elementsFromPoint(x,y):[g];"
+                    + "for(var i=0;i<a.length;i++){var e=a[i],n=e.tagName;"
+                    + "if(n==='VIDEO'){var u=e.currentSrc||e.src;if(!u){var s=e.querySelector('source');u=s?s.src:'';}return ['video',u];}"
+                    + "if(n==='IMG'){return ['image',e.currentSrc||e.src];}"
+                    + "if(e.children.length===0&&e.textContent&&e.textContent.trim().length>0)return null;}return null;}"
+                    + "window.addEventListener('contextmenu',function(ev){var r=f(ev.clientX,ev.clientY,ev.target);"
+                    + "if(!r||!r[1])return;ev.preventDefault();ev.stopPropagation();"
+                    + "window.XOwlMedia.onMedia(t,r[0],r[1],location.href);},true);})();";
+
     private WebView web;
     private EditText urlBar;
     private ProgressBar progress;
@@ -72,6 +87,7 @@ public class MainActivity extends Activity {
     private ScriptStore store;
     private final String token = UUID.randomUUID().toString();
     private ValueCallback<Uri[]> fileCb;
+    private Dialog mediaDialog;
     private boolean desktop = false;
     private String mobileUA;
 
@@ -236,21 +252,20 @@ public class MainActivity extends Activity {
                 ScriptInstaller.promptInstall(this, url, null);
                 return;
             }
-            try {
-                DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
-                r.setMimeType(mime);
-                r.addRequestHeader("User-Agent", ua);
-                String ck = CookieManager.getInstance().getCookie(url);
-                if (ck != null) r.addRequestHeader("Cookie", ck);
-                String fn = URLUtil.guessFileName(url, cd, mime);
-                r.setTitle(fn);
-                r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fn);
-                ((DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE)).enqueue(r);
-                Toast.makeText(this, "بدأ التنزيل: " + fn, Toast.LENGTH_SHORT).show();
-            } catch (Exception e) {
-                Toast.makeText(this, "تعذّر التنزيل", Toast.LENGTH_SHORT).show();
+            enqueueDownload(url, ua, cd, mime, web.getUrl(), null);
+        });
+
+        web.addJavascriptInterface(new MediaBridge(), "XOwlMedia");
+        web.setOnLongClickListener(v -> {
+            if (prefs.js()) return false; // عند تفعيل JS تتولى السكربت الكشف عن الوسائط
+            WebView.HitTestResult h = web.getHitTestResult();
+            int t = h.getType();
+            if ((t == WebView.HitTestResult.IMAGE_TYPE || t == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE)
+                    && h.getExtra() != null) {
+                showMediaMenu("image", h.getExtra(), web.getUrl());
+                return true;
             }
+            return false;
         });
 
         web.setWebChromeClient(new WebChromeClient() {
@@ -319,12 +334,14 @@ public class MainActivity extends Activity {
             @Override
             public void onPageStarted(WebView v, String url, Bitmap icon) {
                 updateUrl(url);
+                injectMedia(url);
                 inject(url, true);
             }
 
             @Override
             public void onPageFinished(WebView v, String url) {
                 updateUrl(url);
+                injectMedia(url);
                 inject(url, false);
             }
         });
@@ -377,6 +394,142 @@ public class MainActivity extends Activity {
                 .append("catch(e){B.log(__t,").append(JSONObject.quote("[" + s.name + "] "))
                 .append("+e);}})();");
         return sb.toString();
+    }
+
+
+    // ---------------------------------------------------------------- Media (long press)
+
+    private void injectMedia(String url) {
+        if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) return;
+        if (!prefs.js()) return;
+        web.evaluateJavascript(MEDIA_JS.replace("TOKEN", JSONObject.quote(token)), null);
+    }
+
+    public final class MediaBridge {
+        @JavascriptInterface
+        public void onMedia(String t, final String type, final String url, final String page) {
+            if (!token.equals(t)) return;
+            runOnUiThread(() -> showMediaMenu(type, url, page));
+        }
+    }
+
+    private TextView menuItem(String text, final Runnable action) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextColor(0xFFFFFFFF);
+        t.setTextSize(16);
+        t.setPadding(Ui.dp(this, 20), Ui.dp(this, 14), Ui.dp(this, 20), Ui.dp(this, 14));
+        t.setOnClickListener(v -> {
+            if (mediaDialog != null) mediaDialog.dismiss();
+            action.run();
+        });
+        return t;
+    }
+
+    private void showMediaMenu(final String type, final String url, final String page) {
+        if (url == null || url.isEmpty()) return;
+        if (mediaDialog != null && mediaDialog.isShowing()) return;
+        final boolean video = type.equals("video");
+        final boolean downloadable = url.startsWith("http://") || url.startsWith("https://");
+
+        final Dialog d = new Dialog(this, android.R.style.Theme_Translucent_NoTitleBar);
+        mediaDialog = d;
+
+        LinearLayout outer = new LinearLayout(this);
+        outer.setGravity(Gravity.BOTTOM);
+        outer.setPadding(Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 16));
+        outer.setOnClickListener(v -> d.dismiss());
+
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setClickable(true);
+        android.graphics.drawable.GradientDrawable bg = Ui.round(0x7314213D, Ui.dp(this, 20)); // شفافية 45%
+        bg.setStroke(Ui.dp(this, 1), 0x33FFFFFF);
+        panel.setBackground(bg);
+
+        TextView title = new TextView(this);
+        title.setText(video ? "فيديو" : "صورة");
+        title.setTextColor(0xFFFFFFFF);
+        title.setTextSize(13);
+        title.setPadding(Ui.dp(this, 20), Ui.dp(this, 14), Ui.dp(this, 20), 0);
+        panel.addView(title);
+        TextView sub = new TextView(this);
+        sub.setText(url.startsWith("data:") ? "data:..." : url);
+        sub.setTextColor(0xCCFFFFFF);
+        sub.setTextSize(12);
+        sub.setSingleLine(true);
+        sub.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+        sub.setPadding(Ui.dp(this, 20), Ui.dp(this, 2), Ui.dp(this, 20), Ui.dp(this, 6));
+        panel.addView(sub);
+
+        panel.addView(menuItem("⬇  تحميل", () -> {
+            if (!downloadable) {
+                Toast.makeText(this, "لا يمكن تنزيل هذا الرابط (بث أو blob)", Toast.LENGTH_LONG).show();
+                return;
+            }
+            enqueueDownload(url, web.getSettings().getUserAgentString(), null, null, page, type);
+        }));
+        panel.addView(menuItem("⧉  نسخ الرابط", () -> {
+            ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE))
+                    .setPrimaryClip(ClipData.newPlainText("url", url));
+            Toast.makeText(this, "تم النسخ", Toast.LENGTH_SHORT).show();
+        }));
+        panel.addView(menuItem("➦  مشاركة", () -> {
+            Intent sh = new Intent(Intent.ACTION_SEND);
+            sh.setType("text/plain");
+            sh.putExtra(Intent.EXTRA_TEXT, url);
+            startActivity(Intent.createChooser(sh, "مشاركة"));
+        }));
+        panel.addView(menuItem("▣  فتح في صفحة خاصة", () -> {
+            Intent i = new Intent(this, MediaViewerActivity.class);
+            i.putExtra(MediaViewerActivity.EXTRA_URL, url);
+            i.putExtra(MediaViewerActivity.EXTRA_TYPE, type);
+            i.putExtra(MediaViewerActivity.EXTRA_PAGE, page);
+            startActivity(i);
+        }));
+        panel.addView(menuItem("↗  فتح في تطبيق آخر", () -> {
+            if (!downloadable) {
+                Toast.makeText(this, "لا يمكن فتح هذا الرابط خارج المتصفح", Toast.LENGTH_LONG).show();
+                return;
+            }
+            try {
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setDataAndType(Uri.parse(url), video ? "video/*" : "image/*");
+                startActivity(Intent.createChooser(i, "فتح باستخدام"));
+            } catch (Exception e) {
+                Toast.makeText(this, "لا يوجد تطبيق مناسب", Toast.LENGTH_SHORT).show();
+            }
+        }));
+
+        outer.addView(panel, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        d.setContentView(outer, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        d.getWindow().setDimAmount(0.2f);
+        d.show();
+    }
+
+    private void enqueueDownload(String url, String ua, String cd, String mime, String referer, String typeHint) {
+        try {
+            DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
+            if (mime != null) r.setMimeType(mime);
+            if (ua != null) r.addRequestHeader("User-Agent", ua);
+            if (referer != null && referer.startsWith("http")) r.addRequestHeader("Referer", referer);
+            String ck = CookieManager.getInstance().getCookie(url);
+            if (ck != null) r.addRequestHeader("Cookie", ck);
+            String fn = URLUtil.guessFileName(url, cd, mime);
+            if (typeHint != null && (fn.endsWith(".bin") || !fn.contains("."))) {
+                fn = (fn.endsWith(".bin") ? fn.substring(0, fn.length() - 4) : fn)
+                        + (typeHint.equals("video") ? ".mp4" : ".jpg");
+            }
+            r.setTitle(fn);
+            r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fn);
+            ((DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE)).enqueue(r);
+            Toast.makeText(this, "بدأ التنزيل: " + fn, Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "تعذّر التنزيل", Toast.LENGTH_SHORT).show();
+        }
     }
 
     // ---------------------------------------------------------------- Navigation
