@@ -1,0 +1,29 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.xowl.browser'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.xowl.browser'
+        minSdk 29
+        targetSdk 34
+        versionCode 1
+        versionName '0.1.0'
+    }
+
+    buildTypes {
+        release { minifyEnabled false }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// عمداً: لا توجد أي مكتبات خارجية (لا AndroidX ولا Google Play Services ولا Firebase)
+dependencies {
+}
