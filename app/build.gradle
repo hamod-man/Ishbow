@@ -10,12 +10,31 @@ android {
         applicationId 'com.xowl.browser'
         minSdk 29
         targetSdk 34
-        versionCode 2
-        versionName '1.1'
+        versionCode 3
+        versionName '1.2'
+    }
+
+    // توقيع ثابت: يُقرأ من أسرار GitHub (متغيرات البيئة) حتى يتحدّث التطبيق فوق النسخة القديمة
+    def ksFile = System.getenv("KEYSTORE_FILE")
+    signingConfigs {
+        ishbow {
+            if (ksFile != null) {
+                storeFile file(ksFile)
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
-        release { minifyEnabled false }
+        debug {
+            if (ksFile != null) signingConfig signingConfigs.ishbow
+        }
+        release {
+            minifyEnabled false
+            if (ksFile != null) signingConfig signingConfigs.ishbow
+        }
     }
 
     compileOptions {
