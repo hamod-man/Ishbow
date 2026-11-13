@@ -1,4 +1,4 @@
-# 🦉 XOwl Browser
+# Ishbow Browser
 
 متصفح أندرويد خفيف بمبدأ **لا لجوجل**، مع مضيف سكربتات مستخدم (User Scripts) شبيه بـ Via.
 

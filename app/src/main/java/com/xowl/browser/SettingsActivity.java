@@ -58,7 +58,7 @@ public class SettingsActivity extends Activity {
         list.addView(Ui.row(this, "مسح بيانات التصفح", "الكوكيز والتخزين والكاش", v -> clearData()));
 
         TextView about = new TextView(this);
-        about.setText("XOwl Browser 0.1.0\nمتصفح بمبدأ: لا لجوجل 🦉");
+        about.setText("Ishbow 0.1.0\nمتصفح بمبدأ: لا لجوجل");
         about.setTextColor(Ui.SUB);
         about.setPadding(Ui.dp(this, 16), Ui.dp(this, 24), Ui.dp(this, 16), Ui.dp(this, 24));
         list.addView(about);

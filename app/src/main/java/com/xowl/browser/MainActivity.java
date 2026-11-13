@@ -306,7 +306,7 @@ public class MainActivity extends Activity {
                                 + "<style>body{background:#121212;color:#eee;font-family:sans-serif;text-align:center;padding:15vh 24px}"
                                 + "h1{font-size:64px;margin:0}small{color:#999}</style></head><body><h1>🦉</h1>"
                                 + "<h2>تم الحظر</h2><p>" + host.replaceAll("[<>&\"']", "") + "</p>"
-                                + "<small>XOwl: لا لجوجل. يمكنك السماح من الإعدادات.</small></body></html>";
+                                + "<small>Ishbow: لا لجوجل. يمكنك السماح من الإعدادات.</small></body></html>";
                         return new WebResourceResponse("text/html", "utf-8",
                                 new ByteArrayInputStream(html.getBytes(StandardCharsets.UTF_8)));
                     }
@@ -417,18 +417,30 @@ public class MainActivity extends Activity {
         urlBar.clearFocus();
     }
 
+    private String logoUri() {
+        try (java.io.InputStream in = getAssets().open("logo.png")) {
+            java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
+            byte[] b = new byte[4096];
+            int n;
+            while ((n = in.read(b)) > 0) o.write(b, 0, n);
+            return "data:image/png;base64," + android.util.Base64.encodeToString(o.toByteArray(), android.util.Base64.NO_WRAP);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     private void loadHome() {
         String t = prefs.engine()[1];
         int q = t.indexOf('?');
         String action = q > 0 ? t.substring(0, q) : t;
         String html = "<html dir='rtl'><head><meta charset='utf-8'>"
                 + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-                + "<style>body{background:#121212;color:#eee;font-family:sans-serif;text-align:center;padding-top:18vh}"
-                + "h1{font-size:72px;margin:0}h2{color:#ff9800;margin:4px 0 28px}"
+                + "<style>body{background:#121212;color:#eee;font-family:sans-serif;text-align:center;padding-top:14vh}"
+                + "h2{color:#ff9800;margin:4px 0 28px}"
                 + "input{width:80%;max-width:420px;padding:14px 18px;border-radius:26px;border:0;"
                 + "background:#2a2a2a;color:#eee;font-size:16px;outline:none}"
                 + "p{color:#777;font-size:13px;margin-top:32px}</style></head><body>"
-                + "<h1>🦉</h1><h2>XOwl</h2>"
+                + "<img src='" + logoUri() + "' width='110' height='110' style='border-radius:24px'><h2>Ishbow</h2>"
                 + "<form action='" + action + "' method='get'><input name='q' placeholder='ابحث في "
                 + prefs.engine()[0].replaceAll("[<>&\"']", "") + "' autocomplete='off'></form>"
                 + "<p>لا لجوجل</p></body></html>";
