@@ -53,6 +53,8 @@ public class SettingsActivity extends Activity {
                 (btn, on) -> p.setJs(on)));
         list.addView(Ui.toggleRow(this, "كوكيز الأطراف الثالثة", "معطّلة افتراضياً لحمايتك من التتبع",
                 p.thirdPartyCookies(), (btn, on) -> p.setThirdPartyCookies(on)));
+        list.addView(Ui.row(this, "التنزيلات", "الملفات مرتبة حسب الصيغة",
+                v -> startActivity(new Intent(this, DownloadsActivity.class))));
         list.addView(Ui.row(this, "سكربتات المستخدم", "إدارة وتثبيت السكربتات",
                 v -> startActivity(new Intent(this, ScriptsActivity.class))));
         list.addView(Ui.row(this, "مسح بيانات التصفح", "الكوكيز والتخزين والكاش", v -> clearData()));

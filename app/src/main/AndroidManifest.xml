@@ -39,5 +39,6 @@
         <activity android:name=".ScriptsActivity" android:exported="false" />
         <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".MediaViewerActivity" android:exported="false" />
+        <activity android:name=".DownloadsActivity" android:exported="false" />
     </application>
 </manifest>

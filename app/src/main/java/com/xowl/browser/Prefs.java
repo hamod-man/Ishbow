@@ -40,4 +40,11 @@ public final class Prefs {
 
     public boolean thirdPartyCookies() { return sp.getBoolean("tpc", false); }
     public void setThirdPartyCookies(boolean v) { sp.edit().putBoolean("tpc", v).apply(); }
+
+    /** "date" أو "name" */
+    public String sortBy() { return sp.getString("sortBy", "date"); }
+    public void setSortBy(String v) { sp.edit().putString("sortBy", v).apply(); }
+
+    public boolean sortAsc() { return sp.getBoolean("sortAsc", false); }
+    public void setSortAsc(boolean v) { sp.edit().putBoolean("sortAsc", v).apply(); }
 }

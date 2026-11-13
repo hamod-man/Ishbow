@@ -184,6 +184,7 @@ public class MainActivity extends Activity {
     private void showMenu(View anchor) {
         PopupMenu pm = new PopupMenu(this, anchor);
         pm.getMenu().add(0, 1, 0, "سكربتات المستخدم");
+        pm.getMenu().add(0, 6, 1, "التنزيلات");
         pm.getMenu().add(0, 2, 1, "الإعدادات");
         pm.getMenu().add(0, 3, 2, desktop ? "✓ وضع سطح المكتب" : "وضع سطح المكتب");
         pm.getMenu().add(0, 4, 3, "مشاركة الرابط");
@@ -195,6 +196,9 @@ public class MainActivity extends Activity {
                     break;
                 case 2:
                     startActivity(new Intent(this, SettingsActivity.class));
+                    break;
+                case 6:
+                    startActivity(new Intent(this, DownloadsActivity.class));
                     break;
                 case 3:
                     desktop = !desktop;
@@ -522,11 +526,15 @@ public class MainActivity extends Activity {
                 fn = (fn.endsWith(".bin") ? fn.substring(0, fn.length() - 4) : fn)
                         + (typeHint.equals("video") ? ".mp4" : ".jpg");
             }
+            fn = fn.replaceAll("[\\\\/:*?\"<>|]", "_");
+            DownloadCat cat = DownloadCat.of(fn, mime);
             r.setTitle(fn);
             r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fn);
+            // Download/Ishbow/<PDF|Images|Videos|Documents>/<اسم الملف>
+            r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS,
+                    "Ishbow/" + cat.folder + "/" + fn);
             ((DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE)).enqueue(r);
-            Toast.makeText(this, "بدأ التنزيل: " + fn, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "بدأ التنزيل ← " + cat.label + ": " + fn, Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             Toast.makeText(this, "تعذّر التنزيل", Toast.LENGTH_SHORT).show();
         }
