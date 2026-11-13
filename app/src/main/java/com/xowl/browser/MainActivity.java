@@ -124,7 +124,7 @@ public class MainActivity extends Activity {
         urlBar.setHintTextColor(Ui.SUB);
         urlBar.setHint("ابحث أو اكتب عنواناً");
         urlBar.setTextSize(15);
-        urlBar.setBackground(Ui.round(0xFF2A2A2A, Ui.dp(this, 22)));
+        urlBar.setBackground(Ui.round(Ui.FIELD, Ui.dp(this, 22)));
         urlBar.setPadding(Ui.dp(this, 16), Ui.dp(this, 8), Ui.dp(this, 16), Ui.dp(this, 8));
         urlBar.setImeOptions(EditorInfo.IME_ACTION_GO);
         urlBar.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
@@ -303,7 +303,7 @@ public class MainActivity extends Activity {
                 if (host != null && GoogleBlocker.isGoogle(host)) {
                     if (r.isForMainFrame()) {
                         String html = "<html dir='rtl'><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
-                                + "<style>body{background:#121212;color:#eee;font-family:sans-serif;text-align:center;padding:15vh 24px}"
+                                + "<style>body{background:#14213D;color:#eee;font-family:sans-serif;text-align:center;padding:15vh 24px}"
                                 + "h1{font-size:64px;margin:0}small{color:#999}</style></head><body><h1>🦉</h1>"
                                 + "<h2>تم الحظر</h2><p>" + host.replaceAll("[<>&\"']", "") + "</p>"
                                 + "<small>Ishbow: لا لجوجل. يمكنك السماح من الإعدادات.</small></body></html>";
@@ -435,15 +435,15 @@ public class MainActivity extends Activity {
         String action = q > 0 ? t.substring(0, q) : t;
         String html = "<html dir='rtl'><head><meta charset='utf-8'>"
                 + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-                + "<style>body{background:#121212;color:#eee;font-family:sans-serif;text-align:center;padding-top:14vh}"
-                + "h2{color:#ff9800;margin:4px 0 28px}"
-                + "input{width:80%;max-width:420px;padding:14px 18px;border-radius:26px;border:0;"
-                + "background:#2a2a2a;color:#eee;font-size:16px;outline:none}"
-                + "p{color:#777;font-size:13px;margin-top:32px}</style></head><body>"
-                + "<img src='" + logoUri() + "' width='110' height='110' style='border-radius:24px'><h2>Ishbow</h2>"
+                + "<style>body{background:#14213D;color:#eee;font-family:sans-serif;text-align:center;padding-top:24vh}"
+                + ""
+                + "input{width:80%;max-width:420px;margin-top:36px;padding:16px 22px;border-radius:26px;border:0;"
+                + "background:#313a4e;color:#eee;font-size:16px;outline:none}"
+                + "p{color:#fff;font:italic bold 22px Georgia,serif;margin-top:32px}</style></head><body>"
+                + "<img src='" + logoUri() + "' style='width:270px;max-width:80%'>"
                 + "<form action='" + action + "' method='get'><input name='q' placeholder='ابحث في "
                 + prefs.engine()[0].replaceAll("[<>&\"']", "") + "' autocomplete='off'></form>"
-                + "<p>لا لجوجل</p></body></html>";
+                + "<p>#nogoogle</p></body></html>";
         web.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
         urlBar.setText("");
     }

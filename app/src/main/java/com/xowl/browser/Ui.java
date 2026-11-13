@@ -11,7 +11,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 final class Ui {
-    static final int BG = 0xFF121212, SURFACE = 0xFF1E1E1E, TEXT = 0xFFEEEEEE, SUB = 0xFF9E9E9E, ACCENT = 0xFFFF9800;
+    static final int BG = 0xFF14213D, SURFACE = 0xFF14213D, FIELD = 0xFF313A4E, TEXT = 0xFFEEEEEE, SUB = 0xFF9E9E9E, ACCENT = 0xFFFF9800;
 
     private Ui() {}
 
